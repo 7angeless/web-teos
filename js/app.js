@@ -1399,6 +1399,7 @@
     let currentStream = null;
     let isCameraActive = false;
 
+<<<<<<< HEAD
     // Actualiza el listado de cámaras en el desplegable (se llama después de obtener permiso)
     async function actualizarListaCamaras(dispositivoSeleccionadoId = null) {
         const select = document.getElementById('camera-select');
@@ -1409,16 +1410,41 @@
             const videoDevices = devices.filter(device => device.kind === 'videoinput');
             
             select.innerHTML = '';
+=======
+    // Intentar listar las cámaras apenas se cargue el DOM
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Retraso ligero para no bloquear otras animaciones al inicio
+        setTimeout(getCameras, 1000); 
+    });
+
+    async function getCameras() {
+        const select = document.getElementById('camera-select');
+        if (!select) return;
+
+        try {
+            // Pedimos permiso rápidamente solo para poder leer los nombres reales de las cámaras
+            await navigator.mediaDevices.getUserMedia({ video: true });
+            
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            
+            select.innerHTML = ''; // Limpiar opciones
+>>>>>>> adb01175781883035d75ac6550568b0be3406e42
             
             if (videoDevices.length === 0) {
                 select.innerHTML = '<option value="">No se detectaron cámaras</option>';
                 return;
             }
             
+<<<<<<< HEAD
+=======
+            // Llenar el select con las cámaras encontradas
+>>>>>>> adb01175781883035d75ac6550568b0be3406e42
             videoDevices.forEach((device, index) => {
                 const option = document.createElement('option');
                 option.value = device.deviceId;
                 option.text = device.label || `Lente Óptico ${index + 1}`;
+<<<<<<< HEAD
                 if (dispositivoSeleccionadoId && device.deviceId === dispositivoSeleccionadoId) {
                     option.selected = true;
                 }
@@ -1426,6 +1452,13 @@
             });
         } catch (err) {
             console.warn("No se pudieron enumerar los dispositivos de video:", err);
+=======
+                select.appendChild(option);
+            });
+        } catch (err) {
+            console.warn("El usuario denegó el permiso o no hay cámaras.", err);
+            select.innerHTML = '<option value="">Permiso requerido para detectar</option>';
+>>>>>>> adb01175781883035d75ac6550568b0be3406e42
         }
     }
 
@@ -1440,7 +1473,10 @@
             // ========== APAGAR CÁMARA ==========
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
+<<<<<<< HEAD
                 currentStream = null;
+=======
+>>>>>>> adb01175781883035d75ac6550568b0be3406e42
             }
             videoElement.srcObject = null;
             videoElement.style.display = 'none';
@@ -1460,6 +1496,7 @@
             if (typeof showTempHint === "function") showTempHint("Transmisión óptica finalizada.");
             
         } else {
+<<<<<<< HEAD
             // ========== ENCENDER CÁMARA (BAJO DEMANDA) ==========
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 if (typeof showTempHint === "function") {
@@ -1477,13 +1514,36 @@
 
             try {
                 // Solicita permiso explícito al usuario en este momento exacto
+=======
+            // ========== ENCENDER CÁMARA ==========
+            const deviceId = select.value;
+            if (!deviceId) {
+                if (typeof showTempHint === "function") showTempHint("Error: No hay lente seleccionado.");
+                // Intentar buscar cámaras de nuevo si el usuario recién dio permiso
+                getCameras(); 
+                return;
+            }
+
+            try {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Conectando...';
+                
+                // Configurar para usar la cámara exacta que el usuario seleccionó en la lista
+                const constraints = {
+                    video: { deviceId: { exact: deviceId } }
+                };
+                
+>>>>>>> adb01175781883035d75ac6550568b0be3406e42
                 currentStream = await navigator.mediaDevices.getUserMedia(constraints);
                 videoElement.srcObject = currentStream;
                 
                 videoElement.style.display = 'block';
                 placeholder.style.display = 'none';
                 
+<<<<<<< HEAD
                 // Cambiar estilos del botón al modo "Detener"
+=======
+                // Cambiar estilos del botón al modo "Apagar"
+>>>>>>> adb01175781883035d75ac6550568b0be3406e42
                 btn.innerHTML = '<i class="fa-solid fa-ban"></i> Detener Transmisión';
                 btn.classList.add('btn-outline');
                 btn.style.borderColor = '#ef4444';
@@ -1495,6 +1555,7 @@
                 statusBadge.style.textShadow = '0 0 10px #ef4444';
                 
                 isCameraActive = true;
+<<<<<<< HEAD
 
                 // Ahora que tenemos permiso, listamos las cámaras con sus nombres reales
                 await actualizarListaCamaras(selectedDeviceId);
@@ -1529,18 +1590,35 @@
                 btn.style.borderColor = 'var(--primary)';
                 btn.style.color = 'var(--text-main)';
                 isCameraActive = false;
+=======
+                if (typeof showTempHint === "function") showTempHint("Enlace de video establecido.");
+                
+            } catch (err) {
+                console.error("Error al acceder a la cámara:", err);
+                if (typeof showTempHint === "function") showTempHint("Acceso denegado o lente en uso por otra app.");
+                btn.innerHTML = '<i class="fa-solid fa-power-off"></i> Iniciar Transmisión';
+>>>>>>> adb01175781883035d75ac6550568b0be3406e42
             }
         }
     }
 
+<<<<<<< HEAD
     // Si el usuario cambia de cámara en el desplegable MIENTRAS está encendida, hacemos el cambio
+=======
+    // Si el usuario cambia de cámara en el desplegable MIENTRAS está encendida, hacemos el cambio automático
+>>>>>>> adb01175781883035d75ac6550568b0be3406e42
     document.addEventListener('DOMContentLoaded', () => {
         const camSelect = document.getElementById('camera-select');
         if (camSelect) {
             camSelect.addEventListener('change', () => {
                 if (isCameraActive) {
+<<<<<<< HEAD
                     toggleCamera(); // Apaga la cámara actual
                     setTimeout(() => toggleCamera(), 500); // Enciende la nueva cámara seleccionada
+=======
+                    toggleCamera(); // Apaga la actual
+                    setTimeout(() => toggleCamera(), 600); // Enciende la nueva después de medio segundo
+>>>>>>> adb01175781883035d75ac6550568b0be3406e42
                 }
             });
         }
