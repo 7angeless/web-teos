@@ -72,36 +72,6 @@ web-teos-main/
 
 ---
 
-## 💻 Instrucciones de Instalación y Ejecución
-
-Al ser una aplicación frontend basada en estándares web modernos (con módulos y consumo de recursos 3D y GeoJSON), se recomienda ejecutarla a través de un servidor web local:
-
-### Opción 1: Extensión Live Server (Visual Studio Code)
-1. Abrir la carpeta del proyecto en **VS Code**.
-2. Hacer clic derecho sobre `index.html` y seleccionar **"Open with Live Server"**.
-3. La aplicación se abrirá automáticamente en `http://127.0.0.1:5500`.
-
-### Opción 2: Python HTTP Server
-Si tienes Python instalado, ejecuta en la terminal dentro de la carpeta del proyecto:
-```bash
-python -m http.server 8000
-```
-Luego abre tu navegador en `http://localhost:8000`.
-
----
-
-## 🎓 Información Académica
-
-- **Institución:** [Nombre del Instituto Superior / Universidad]
-- **Carrera / Especialidad:** [Ej: Desarrollo de Sistemas / Computación e Informática / Mecatrónica]
-- **Curso / Asignatura:** [Ej: Taller de Proyectos / Desarrollo Web / Sistemas Embebidos e IoT]
-- **Ciclo / Semestre:** [Ej: 2024-II / Ciclo VI]
-- **Autor(es):**
-  - [Nombre del Estudiante] - *Desarrollador / Investigador*
-- **Docente / Asesor:** [Nombre del Docente]
-
----
-
 ## 📄 Licencia
 
 Este proyecto fue desarrollado con fines educativos y de investigación académica.
