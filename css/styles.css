@@ -689,6 +689,11 @@
         /* ================= ESTILOS INTEGRADOS LEAFLET SCI-FI ================= */
         #map, #mapa-sismico {
             background-color: #0b1526 !important;
+            cursor: crosshair;
+        }
+
+        #map .leaflet-grab {
+            cursor: crosshair !important;
         }
 
         /* Ocultar el cuadro blanco lateral por defecto de Leaflet Routing Machine */

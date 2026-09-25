@@ -318,44 +318,104 @@
             map = L.map('map').setView([lat, lng], 14);
             crearCapaMapaOscuro().addTo(map);
 
-            const robotIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background:var(--accent);width:18px;height:18px;border-radius:50%;box-shadow:0 0 20px var(--accent); border:2px solid white;'></div>", iconSize: [18, 18], iconAnchor: [9, 9] });
+            const robotIcon = L.divIcon({ 
+                className: 'custom-div-icon', 
+                html: "<div style='background:var(--accent);width:18px;height:18px;border-radius:50%;box-shadow:0 0 20px var(--accent); border:2px solid white;'></div>", 
+                iconSize: [18, 18], 
+                iconAnchor: [9, 9] 
+            });
             
-            robotMarker = L.marker([lat, lng], {icon: robotIcon}).addTo(map).bindPopup('<b style="color:#ffffff">Nodo Central (Origen)</b>').openPopup();
+            robotMarker = L.marker([lat, lng], {icon: robotIcon}).addTo(map)
+                .bindPopup('<b style="color:#ffffff">Nodo Central (Origen)</b>').openPopup();
 
-            map.on('click', function(e) {
-                if(!robotMarker) return;
-                if(flotasActivas.length >= 3) {
+            map.on('click', async function(e) {
+                if (!robotMarker) {
+                    robotMarker = L.marker([lat, lng], {icon: robotIcon}).addTo(map)
+                        .bindPopup('<b style="color:#ffffff">Nodo Central (Origen)</b>');
+                }
+                if (flotasActivas.length >= 3) {
                     showTempHint("Límite máximo de 3 unidades en campo.");
                     return;
                 }
 
-                let idActual = flotasActivas.length; 
-                let color = coloresUnidad[idActual];
-                let nombre = nombresUnidad[idActual];
+                const idActual = flotasActivas.length; 
+                const color = coloresUnidad[idActual];
+                const nombre = nombresUnidad[idActual];
 
                 showTempHint(`Calculando vector para Unidad ${nombre}...`);
 
-                let controlRuta = L.Routing.control({
-                    waypoints: [robotMarker.getLatLng(), e.latlng],
-                    routeWhileDragging: false, addWaypoints: false, show: false,
-                    lineOptions: { styles: [{color: color, opacity: 0.8, weight: 4}] },
-                    createMarker: function(i, wp, nWps) {
-                        if (i === nWps - 1) { 
-                            const destIcon = L.divIcon({ className: 'custom-div-icon', html: `<div style='background:${color};width:12px;height:12px;border-radius:0%;box-shadow:0 0 15px ${color}; border:1px solid white; transform: rotate(45deg);'></div>`, iconSize: [12, 12], iconAnchor: [6, 6] });
-                            return L.marker(wp.latLng, {icon: destIcon}).bindPopup(`<b style='color:#ffffff'>Destino ${nombre}</b>`); 
-                        }
-                        return null; 
-                    }
-                }).addTo(map);
+                // Registro inicial de la unidad
+                const flotaItem = {
+                    id: idActual,
+                    color: color,
+                    nombre: nombre,
+                    lineaRuta: null,
+                    destMarker: null,
+                    markerAnimado: null,
+                    timer: null
+                };
+                flotasActivas.push(flotaItem);
 
-                controlRuta.on('routesfound', function(e) {
-                    let rutas = e.routes;
-                    let resumen = rutas[0].summary;
-                    
-                    let distanciaKm = (resumen.totalDistance / 1000).toFixed(2);
-                    let tiempoMin = Math.max(1, Math.round(resumen.totalTime / 60)); 
-                    
-                    let uiPanel = document.getElementById(`ruta-${idActual + 1}`);
+                const origenLatLng = robotMarker.getLatLng();
+                const destLatLng = e.latlng;
+
+                // 1. Marcador del objetivo en el mapa
+                const destIcon = L.divIcon({ 
+                    className: 'custom-div-icon', 
+                    html: `<div style='background:${color};width:14px;height:14px;border-radius:0%;box-shadow:0 0 15px ${color}; border:2px solid white; transform: rotate(45deg);'></div>`, 
+                    iconSize: [14, 14], 
+                    iconAnchor: [7, 7] 
+                });
+                const destMarker = L.marker(destLatLng, {icon: destIcon}).addTo(map)
+                    .bindPopup(`<b style='color:#ffffff'>Destino Unidad ${nombre}</b>`); 
+                flotaItem.destMarker = destMarker;
+
+                // 2. Consulta de ruta real por carreteras con Mapbox Directions API
+                let coordenadasRuta = [];
+                let distanciaKm = "0.00";
+                let tiempoMin = 1;
+
+                try {
+                    const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/driving/${origenLatLng.lng},${origenLatLng.lat};${destLatLng.lng},${destLatLng.lat}?access_token=${MAPBOX_ACCESS_TOKEN}&geometries=geojson&overview=full`;
+                    const res = await fetch(directionsUrl);
+                    const data = await res.json();
+
+                    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                        const r = data.routes[0];
+                        distanciaKm = (r.distance / 1000).toFixed(2);
+                        tiempoMin = Math.max(1, Math.round(r.duration / 60));
+                        // Convertir formato [lng, lat] de Mapbox a [lat, lng] de Leaflet
+                        coordenadasRuta = r.geometry.coordinates.map(pt => [pt[1], pt[0]]);
+                    } else {
+                        throw new Error("Sin carreteras disponibles en la coordenada");
+                    }
+                } catch (errRouting) {
+                    console.warn(`Mapbox no pudo calcular ruta vial para Unidad ${nombre}. Activando vector directo de emergencia.`, errRouting);
+                    const distMetros = origenLatLng.distanceTo(destLatLng);
+                    distanciaKm = (distMetros / 1000).toFixed(2);
+                    tiempoMin = Math.max(1, Math.round((distMetros / 1000) / 45 * 60)); // ~45 km/h
+                    const steps = 60;
+                    coordenadasRuta = [];
+                    for (let s = 0; s <= steps; s++) {
+                        const ratio = s / steps;
+                        coordenadasRuta.push([
+                            origenLatLng.lat + (destLatLng.lat - origenLatLng.lat) * ratio,
+                            origenLatLng.lng + (destLatLng.lng - origenLatLng.lng) * ratio
+                        ]);
+                    }
+                }
+
+                // 3. Trazar línea de trayectoria en el mapa
+                const lineaRuta = L.polyline(coordenadasRuta, {
+                    color: color,
+                    weight: 4,
+                    opacity: 0.85
+                }).addTo(map);
+                flotaItem.lineaRuta = lineaRuta;
+
+                // 4. Actualizar tarjeta UI correspondiente
+                const uiPanel = document.getElementById(`ruta-${idActual + 1}`);
+                if (uiPanel) {
                     uiPanel.classList.add('activa');
                     uiPanel.classList.remove('libre');
                     uiPanel.innerHTML = `
@@ -366,11 +426,10 @@
                             <span style="color:var(--accent); font-weight:500;"><i class="fa-solid fa-truck-fast"></i> En tránsito...</span>
                         </div>
                     `;
+                }
 
-                    simularVehiculo(rutas[0].coordinates, idActual, color, nombre, uiPanel);
-                });
-
-                flotasActivas.push({ control: controlRuta, markerAnimado: null, timer: null });
+                // 5. Iniciar animación de avance del vehículo
+                simularVehiculo(coordenadasRuta, idActual, color, nombre, uiPanel);
             });
         } else {
             map.setView([lat, lng], 14);
@@ -380,46 +439,70 @@
     }
 
     function simularVehiculo(coordenadas, id, color, nombre, uiPanel) {
+        if (!coordenadas || coordenadas.length === 0) return;
         let index = 0;
+        const paso = Math.max(1, Math.round(coordenadas.length / 70));
+
         const vehiculoIcon = L.divIcon({
             className: 'bot-marker',
             html: `<i class="fa-solid fa-location-crosshairs" style="color:${color}; font-size: 1.5rem;"></i>`,
-            iconSize: [20, 20], iconAnchor: [10, 10]
+            iconSize: [20, 20], 
+            iconAnchor: [10, 10]
         });
 
-        let vehiculo = L.marker(coordenadas[0], {icon: vehiculoIcon}).addTo(map);
-        flotasActivas[id].markerAnimado = vehiculo;
+        const vehiculo = L.marker(coordenadas[0], {icon: vehiculoIcon}).addTo(map);
+        if (flotasActivas[id]) {
+            flotasActivas[id].markerAnimado = vehiculo;
+        }
 
-        flotasActivas[id].timer = setInterval(() => {
-            index += 5; 
-            if(index >= coordenadas.length) {
-                clearInterval(flotasActivas[id].timer);
+        const timer = setInterval(() => {
+            index += paso; 
+            if (index >= coordenadas.length) {
+                clearInterval(timer);
                 vehiculo.setLatLng(coordenadas[coordenadas.length - 1]);
                 
-                uiPanel.classList.remove('activa');
-                uiPanel.classList.add('completada');
-                uiPanel.innerHTML = `
-                    <strong style="color:${color}">Unidad ${nombre}</strong>
-                    <span style="color:var(--accent); font-weight:500;"><i class="fa-solid fa-circle-check"></i> Ruta completada</span>
-                `;
+                if (uiPanel) {
+                    uiPanel.classList.remove('activa');
+                    uiPanel.classList.add('completada');
+                    uiPanel.innerHTML = `
+                        <strong style="color:${color}">Unidad ${nombre}</strong>
+                        <span style="color:var(--accent); font-weight:500;"><i class="fa-solid fa-circle-check"></i> Ruta completada</span>
+                    `;
+                }
             } else {
                 vehiculo.setLatLng(coordenadas[index]);
             }
-        }, 100); 
+        }, 80);
+
+        if (flotasActivas[id]) {
+            flotasActivas[id].timer = timer;
+        }
     }
 
     function limpiarRutas() {
         flotasActivas.forEach(flota => {
-            if(flota.control) map.removeControl(flota.control);
-            if(flota.markerAnimado) map.removeLayer(flota.markerAnimado);
-            if(flota.timer) clearInterval(flota.timer);
+            if (flota.lineaRuta) {
+                try { map.removeLayer(flota.lineaRuta); } catch(e){}
+            }
+            if (flota.destMarker) {
+                try { map.removeLayer(flota.destMarker); } catch(e){}
+            }
+            if (flota.markerAnimado) {
+                try { map.removeLayer(flota.markerAnimado); } catch(e){}
+            }
+            if (flota.control) {
+                try { map.removeControl(flota.control); } catch(e){}
+            }
+            if (flota.timer) clearInterval(flota.timer);
         });
         flotasActivas = [];
         
-        for(let i=1; i<=3; i++){
-            let panel = document.getElementById(`ruta-${i}`);
-            panel.className = 'ruta-info libre';
-            panel.innerHTML = `<strong>Unidad ${nombresUnidad[i-1]}</strong> <span class="status">Esperando coordenadas...</span>`;
+        for (let i = 1; i <= 3; i++) {
+            const panel = document.getElementById(`ruta-${i}`);
+            if (panel) {
+                panel.className = 'ruta-info libre';
+                panel.innerHTML = `<strong>Unidad ${nombresUnidad[i-1]}</strong> <span class="status">Esperando coordenadas...</span>`;
+            }
         }
         showTempHint("Rutas canceladas. Mapa limpio.");
     }
