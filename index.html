@@ -13,11 +13,11 @@
     <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js'></script>
     <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css' rel='stylesheet' />
 
-    <!-- Leaflet & Leaflet Routing Machine CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <!-- Leaflet JS & CSS (Cloudflare CDN de alta velocidad) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
-    <link rel="stylesheet" href="css/styles.css?v=2.1">
+    <link rel="stylesheet" href="css/styles.css?v=2.3">
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 
 </head>
@@ -775,20 +775,33 @@
         </main>
     </div>
 
-    <!-- ================= CHATBOT ================= -->
+    <!-- ================= CHATBOT Y NOTIFICACIONES ================= -->
     <div class="teo-widget">
-        <!-- ... (código del chatbot) ... -->
+        <div id="bubble-hint" class="bubble-hint"></div>
+        <div id="chat-window" class="chat-window card glass-panel">
+            <div class="chat-header">
+                <span><i class="fa-solid fa-robot"></i> Asistente TEOS</span>
+                <button class="close-btn" onclick="toggleChat()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+                <div class="msg bot">Hola, soy el asistente táctico de TEOS. ¿En qué puedo asistirte hoy?</div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="chat-input-text" placeholder="Escribe un comando o consulta...">
+                <button onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+        <div class="teo-avatar" onclick="toggleChat()">
+            <i class="fa-solid fa-robot"></i>
+        </div>
     </div>
 
-    <!-- ================= SCRIPTS DE LÓGICA ================= -->
-    <!-- Cargamos las librerías pesadas sin bloquear el renderizado visual -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js" defer></script>
+    <!-- Cargamos librerías analíticas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0" defer></script>
 
     <!-- Enlazamos nuestro nuevo archivo JavaScript con toda la lógica -->
-    <script src="js/app.js?v=2.1" defer></script>
+    <script src="js/app.js?v=2.3" defer></script>
 
     <!-- ================= MODAL DE INICIO DE SESIÓN ================= -->
     <div id="login-modal" class="modal-overlay">

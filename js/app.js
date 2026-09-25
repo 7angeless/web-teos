@@ -6,6 +6,7 @@
      * Resuelve de forma definitiva el aviso "API KEY REQUIRED" de proveedores de teselas obsoletos.
      */
     function crearCapaMapaOscuro() {
+        if (typeof L === 'undefined') return null;
         return L.tileLayer(
             `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${MAPBOX_ACCESS_TOKEN}`,
             {
@@ -258,15 +259,23 @@
     }
 
     function toggleChat() {
-        document.getElementById('chat-window').classList.toggle('open');
-        document.getElementById('bubble-hint').classList.remove('show');
+        const chatWin = document.getElementById('chat-window');
+        if (chatWin) chatWin.classList.toggle('open');
+        const hint = document.getElementById('bubble-hint');
+        if (hint) hint.classList.remove('show');
     }
 
     function showTempHint(text) {
         const hint = document.getElementById('bubble-hint');
+        if (!hint) {
+            console.log('[TEOS NOTIFICACIÓN]', text);
+            return;
+        }
         hint.innerText = text;
         hint.classList.add('show');
-        setTimeout(() => { hint.classList.remove('show'); }, 4000);
+        setTimeout(() => {
+            if (hint) hint.classList.remove('show');
+        }, 4000);
     }
 
     function sendMessage() {
@@ -307,6 +316,12 @@
     const nombresUnidad = ['A1', 'B2', 'C4'];
 
     function iniciarRastreoGPS() {
+        if (typeof L === 'undefined') {
+            console.warn("Aguardando disponibilidad de Leaflet...");
+            setTimeout(iniciarRastreoGPS, 100);
+            return;
+        }
+
         document.getElementById('gps-coords').innerText = "Estableciendo enlace...";
         
         let lat = -5.0911322; 
@@ -590,6 +605,10 @@
     let capasIGP = [];
 
     function inicializarMapaSismico() {
+        if (typeof L === 'undefined') {
+            setTimeout(inicializarMapaSismico, 100);
+            return;
+        }
         if (!mapSismico) {
             mapSismico = L.map('mapa-sismico').setView([-9.19, -75.01], 5);
             crearCapaMapaOscuro().addTo(mapSismico);
