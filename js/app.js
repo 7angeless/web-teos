@@ -1,3 +1,22 @@
+    /* ================= CONFIGURACIÓN MAPAS / CREDENCIALES ================= */
+    const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoibHVpczExMSIsImEiOiJjbXJuMWJqaWUxczczNDhvcm52MTJwYWVhIn0.xg-dCcY25lhedOHP3Ye_ow';
+
+    /**
+     * Retorna una capa de teselas oscuras de alta definición usando Mapbox Dark-v11 (@2x)
+     * Resuelve de forma definitiva el aviso "API KEY REQUIRED" de proveedores de teselas obsoletos.
+     */
+    function crearCapaMapaOscuro() {
+        return L.tileLayer(
+            `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/512/{z}/{x}/{y}@2x?access_token=${MAPBOX_ACCESS_TOKEN}`,
+            {
+                tileSize: 512,
+                zoomOffset: -1,
+                maxZoom: 19,
+                attribution: '© <a href="https://www.mapbox.com/" target="_blank">Mapbox</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+            }
+        );
+    }
+
     /* ================= PARTÍCULAS EN CANVAS ================= */
     const canvas = document.getElementById('particle-canvas');
     const ctx = canvas.getContext('2d');
@@ -98,10 +117,17 @@
 
         // Disparadores específicos por vista
         if (viewId === 'view-education') {
-            // Inicializamos o redimensionamos el mapa 3D cuando entra a esta pestaña
+            // Inicializamos o redimensionamos los mapas de la base de conocimiento
             setTimeout(() => {
                 inicializarMapaDepartamentos();
+                inicializarMapaSismico();
             }, 300); // Pequeño retraso para que la animación CSS de la vista termine
+        }
+
+        if (viewId === 'view-control') {
+            setTimeout(() => {
+                if (map) map.invalidateSize();
+            }, 300);
         }
     }
 
@@ -110,7 +136,21 @@
         document.querySelectorAll('.nav-menu li').forEach(li => li.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         element.classList.add('active');
-        if(tabId === 'tab-gps' && map) { setTimeout(() => { map.invalidateSize(); }, 200); }
+        
+        if (tabId === 'tab-gps') {
+            if (!map) {
+                iniciarRastreoGPS();
+            } else {
+                setTimeout(() => { map.invalidateSize(); }, 200);
+            }
+        }
+        if (tabId === 'tab-sismos') {
+            if (!mapSismico) {
+                inicializarMapaSismico();
+            } else {
+                setTimeout(() => { mapSismico.invalidateSize(); }, 200);
+            }
+        }
     }
 
     /* ================= LÓGICA ESP32 / SIMULACIÓN ================= */
@@ -276,11 +316,11 @@
 
         if (!map) {
             map = L.map('map').setView([lat, lng], 14);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+            crearCapaMapaOscuro().addTo(map);
 
             const robotIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background:var(--accent);width:18px;height:18px;border-radius:50%;box-shadow:0 0 20px var(--accent); border:2px solid white;'></div>", iconSize: [18, 18], iconAnchor: [9, 9] });
             
-            robotMarker = L.marker([lat, lng], {icon: robotIcon}).addTo(map).bindPopup('<b style="color:var(--text-dark)">Nodo Central (Origen)</b>').openPopup();
+            robotMarker = L.marker([lat, lng], {icon: robotIcon}).addTo(map).bindPopup('<b style="color:#ffffff">Nodo Central (Origen)</b>').openPopup();
 
             map.on('click', function(e) {
                 if(!robotMarker) return;
@@ -302,7 +342,7 @@
                     createMarker: function(i, wp, nWps) {
                         if (i === nWps - 1) { 
                             const destIcon = L.divIcon({ className: 'custom-div-icon', html: `<div style='background:${color};width:12px;height:12px;border-radius:0%;box-shadow:0 0 15px ${color}; border:1px solid white; transform: rotate(45deg);'></div>`, iconSize: [12, 12], iconAnchor: [6, 6] });
-                            return L.marker(wp.latLng, {icon: destIcon}).bindPopup(`<b style='color:var(--text-dark)'>Destino ${nombre}</b>`); 
+                            return L.marker(wp.latLng, {icon: destIcon}).bindPopup(`<b style='color:#ffffff'>Destino ${nombre}</b>`); 
                         }
                         return null; 
                     }
@@ -469,7 +509,7 @@
     function inicializarMapaSismico() {
         if (!mapSismico) {
             mapSismico = L.map('mapa-sismico').setView([-9.19, -75.01], 5);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(mapSismico);
+            crearCapaMapaOscuro().addTo(mapSismico);
             hacerWebScrapingIGP(); 
         }
         setTimeout(() => { mapSismico.invalidateSize(); }, 300);
@@ -1177,7 +1217,7 @@
         }
 
         // 1. Configurar la credencial
-        mapboxgl.accessToken = 'pk.eyJ1IjoibHVpczExMSIsImEiOiJjbXJuMWJqaWUxczczNDhvcm52MTJwYWVhIn0.xg-dCcY25lhedOHP3Ye_ow'; 
+        mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN; 
 
         // 2. Inicializar el renderizado 3D en el nuevo contenedor
         mapDept = new mapboxgl.Map({
